@@ -111,10 +111,144 @@ public interface ChatModel {
    }
    ```
 
-   
 
-   
+### 2. ChatMemory
 
-   
+手动维护和管理聊天消息很麻烦。因此，LangChain4j 提供了 ChatMemory 抽象层以及多个开箱即用的实现。
+
+ChatMemory 当作ChatMessages的容器, 并提供以下功能:
+
+- Eviction policy
+
+- Persistence
+
+- Special treatment of SystemMessage
+
+- Special treatment of tool messages
+
+  
+
+#### 记忆和历史的区别
+
+- 历史记录会完整保存用户与人工智能之间的所有消息。用户在用户界面中看到的就是历史记录，它代表了实际发生过的所有对话内容。
+- 记忆会保留一些展示给大模型使得它仿佛记得回话. 根据所使用的记忆算法，它可以以各种方式修改历史记录: 驱逐一些消息、汇总多个消息、汇总单独的消息、从消息中删除不重要的细节、向消息中注入额外信息（例如 RAG）或指令（例如 结构化输出），等等。
+
+LangChain4j 目前只提供记忆
+
+
+
+#### Eviction Policy
+
+##### 为什么需要:
+
+- 为了适应 LLM 的上下文窗口，LLM 一次可以处理的令牌数量是有上限的。在某些情况下，对话可能会超过这个限制。在这种情况下，应该移除一些消息。通常情况下，会移除最旧的消息，但如有必要，也可以实现更复杂的算法。
+- 为了控制成本。每个令牌都有成本，因此每次调用 LLM 的成本都会逐渐增加。清除不必要的消息可以降低成本。
+- 为了控制延迟。发送到 LLM 的令牌越多，处理它们所需的时间就越长。
+
+##### 目前LangChain4j提供两种实现:
+
+1. **MessageWindowChatMemory**: 保留最近的N条消息的滑动窗口 (由于每条消息可以包含数量不等的令牌，因此 MessageWindowChatMemory 主要用于快速原型设计)
+2. **TokenWindowChatMemory**: 保留最近的N个token
+
+
+
+#### Persistence
+
+ChatMemory 的实现默认把ChatMessages存在内存, 如果对持久化有需求则可以自定义ChatMemoryStore区存储ChatMessages:
+
+class PersistentChatMemoryStore implements ChatMemoryStore {
+
+```Java
+    @Override
+    public List<ChatMessage> getMessages(Object memoryId) {
+      // TODO: Implement getting all messages from the persistent store by memory ID.
+      // ChatMessageDeserializer.messageFromJson(String) and 
+      // ChatMessageDeserializer.messagesFromJson(String) helper methods can be used to
+      // easily deserialize chat messages from JSON.
+    }
+
+    @Override
+    public void updateMessages(Object memoryId, List<ChatMessage> messages) {
+        // TODO: Implement updating all messages in the persistent store by memory ID.
+        // ChatMessageSerializer.messageToJson(ChatMessage) and 
+        // ChatMessageSerializer.messagesToJson(List<ChatMessage>) helper methods can be used to
+        // easily serialize chat messages into JSON.
+    }
+
+    @Override
+    public void deleteMessages(Object memoryId) {
+      // TODO: Implement deleting all messages in the persistent store by memory ID.
+    }
+}
+
+ChatMemory chatMemory = MessageWindowChatMemory.builder()
+        .id("12345")
+        .maxMessages(10)
+        .chatMemoryStore(new PersistentChatMemoryStore())
+        .build();
+```
+
+
+
+
+
+**MessageWindowChatMemory:**
+
+
+
+```Java
+  @GetMapping("/chatmemory/test1")
+  public String chat1() {
+
+      MessageWindowChatMemory memory = MessageWindowChatMemory.builder()
+              .id("12345")
+              .maxMessages(10)
+              .build();
+      UserMessage firstUserMessage = UserMessage.from("Hello, my name is Klaus");
+      UserMessage secondUserMessage = UserMessage.from("What is my name?");
+      memory.add(firstUserMessage);
+      memory.add(secondUserMessage);
+
+      ChatResponse response = model.chat(memory.messages());
+
+      return response.aiMessage().text();
+  }
+```
+
+
+
+**TokenWindowChatMemory:**
+
+```Java
+@GetMapping("/chatmemory/test2")
+public String chat2() {
+  TokenWindowChatMemory memory = TokenWindowChatMemory.builder()
+          .id("123456")
+          .maxTokens(100, new OpenAiTokenCountEstimator("gpt-4"))
+          .build();
+  UserMessage firstUserMessage = UserMessage.from("Hello, my name is Bytewizard");
+  UserMessage secondUserMessage = UserMessage.from("What is my name?");
+
+  memory.add(firstUserMessage);
+  memory.add(secondUserMessage);
+
+  ChatResponse response = model.chat(memory.messages());
+
+  return response.aiMessage().text();
+}
+```
+
+#### 系统消息的特殊处理
+
+SystemMessage 是一种特殊类型的消息，因此其处理方式与其他消息类型不同：
+
+- SystemMessage 一旦添加，便会一直保留
+- 同一时间只能存在一条 SystemMessage。
+- 如果添加一条内容相同的 SystemMessage，则会被忽略。
+- 如果添加一条内容不同的 SystemMessage，则会替换之前添加的 SystemMessage。
+
+
+
+
 
  

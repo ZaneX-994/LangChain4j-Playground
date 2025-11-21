@@ -11,7 +11,8 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>1.ChatAndLanguageModels</module>
+        <module>ChatAndLanguageModels</module>
+        <module>ChatMemory</module>
     </modules>
 
     <properties>
