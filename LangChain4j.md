@@ -249,6 +249,93 @@ SystemMessage 是一种特殊类型的消息，因此其处理方式与其他消
 
 
 
+### 3. Response Streaming
 
+LLMs 每次生成一个词元，因此许多 LLM 提供商提供了一种逐词元流式传输响应的方法，而无需等待整个文本生成完毕。这显著改善了用户体验，因为用户无需等待未知的时间，几乎可以立即开始阅读响应。
 
- 
+#### StreamingChatResponseHandler
+
+对于ChatModel和LanguageModel接口, 分别有对应的StreamingChatModel和StreamingLanguageModel接口。这些函数具有类似的 API，但可以流式传输响应。它们接受 StreamingChatResponseHandler 接口的实现作为参数。
+
+```Java
+@Bean
+public StreamingChatModel chatModelQwen() {
+    return OpenAiStreamingChatModel.builder()
+            .apiKey(System.getenv("aliQwen_key"))
+            .modelName("qwen-vl-plus")
+            .baseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1")
+            .build();
+}
+
+@GetMapping("/stream/chat1")
+public void streamChat1(){
+
+    String userMessage = "Tell me a joke";
+
+    chatModel.chat(userMessage, new StreamingChatResponseHandler() {
+        @Override
+        public void onPartialResponse(String s) {
+            System.out.println("onPartialResponse: " + s);
+        }
+
+        @Override
+        public void onCompleteResponse(ChatResponse chatResponse) {
+            System.out.println("onCompleteResponse: " + chatResponse);
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            System.out.println("onError: " + throwable.getMessage());
+        }
+    });
+
+    
+}
+```
+
+#### LambdaStreamingResponseHandler
+
+使用 LambdaStreamingResponseHandler 类可以更紧凑地传输响应。
+
+```Java
+@GetMapping("/stream/chat2")
+public void streamChat2() {
+    chatModel.chat("Tell me a joke", LambdaStreamingResponseHandler.onPartialResponse(System.out::println));
+}
+```
+
+实际上 LambdaStreamingResponseHandler.onPartialResponse 本质就是一个**工具方法**，它内部创建了 `StreamingChatResponseHandler`匿名类, 为onPartialResponse和onError提供了默认实现
+
+#### Streaming Cancellation
+
+你可以用以下方式取消流式输出:
+
+- `onPartialResponse(PartialResponse, PartialResponseContext)`
+- `onPartialThinking(PartialThinking, PartialThinkingContext)`
+- `onPartialToolCall(PartialToolCall, PartialToolCallContext)`
+
+```Java
+@GetMapping("/stream/chat3")
+public void streamChat3() {
+    chatModel.chat("Tell me a joke", new StreamingChatResponseHandler() {
+
+        @Override
+        public void onPartialResponse(PartialResponse partialResponse, PartialResponseContext context) {
+            process(partialResponse); // 自行处理response
+            if (shouldCancel()) { // 自行判断什么时候取消
+                context.streamingHandle().cancel();
+            }
+        }
+
+        @Override
+        public void onCompleteResponse(ChatResponse chatResponse) {
+
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+
+        }
+    });
+}
+```

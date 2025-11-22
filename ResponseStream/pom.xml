@@ -7,11 +7,10 @@
         <artifactId>LangChain4j-PlayGround</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
-
-    <artifactId>ChatMemory</artifactId>
+    <artifactId>ResponseStream</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>ChatMemory</name>
-    <description>ChatMemory</description>
+    <name>ResponseStream</name>
+    <description>ResponseStream</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

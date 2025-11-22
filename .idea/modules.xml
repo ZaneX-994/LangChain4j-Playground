@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ChatMemory/ChatMemory.iml" filepath="$PROJECT_DIR$/ChatMemory/ChatMemory.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ResponseStream/ResponseStream.iml" filepath="$PROJECT_DIR$/ResponseStream/ResponseStream.iml" />
     </modules>
   </component>
 </project>

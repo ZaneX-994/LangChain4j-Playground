@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="ChatAndLanguageModels" />
         <module name="ChatMemory" />
+        <module name="ResponseStream" />
       </profile>
     </annotationProcessing>
   </component>
@@ -16,6 +17,7 @@
       <module name="ChatAndLanguageModels" options="" />
       <module name="ChatMemory" options="" />
       <module name="LangChain4j-PlayGround" options="" />
+      <module name="ResponseStream" options="" />
     </option>
   </component>
 </project>
